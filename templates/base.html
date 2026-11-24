@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Мировой Атлас{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🌍</text></svg>">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+{% if user %}
+<nav class="navbar">
+    <div class="container">
+        <a class="logo" href="/"><span class="logo-icon">🌍</span> Мировой Атлас</a>
+        <div class="nav-links">
+            <a href="/">Главная</a>
+            <a href="/profile">Профиль</a>
+            {% if user.role == 'admin' %}
+                <a href="/edit">Редактор главной</a>
+                <a href="/users">Пользователи</a>
+            {% endif %}
+        </div>
+        <div class="nav-user">
+            <img src="{{ user.avatar }}" alt="Аватар {{ user.login }}">
+            <div class="who">
+                <b>{{ user.login }}</b><br>
+                {% if user.role == 'admin' %}
+                    <span class="role-badge admin">админ</span>
+                {% else %}
+                    <span class="role-badge reader">читатель</span>
+                {% endif %}
+            </div>
+            <a class="btn-exit" href="/logout">Выйти</a>
+        </div>
+    </div>
+</nav>
+{% endif %}
+
+<div class="container">
+    {% if flash %}
+        <div class="flash {{ flash.kind }}">{{ flash.text }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+</div>
+
+<footer>
+    «Мировой Атлас» — учебный проект на FastAPI · данные стран: Викиданные и mledoze/countries
+</footer>
+
+</body>
+</html>

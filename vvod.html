@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Слот-генератор пароля</title>
+  <style>
+    @import url('https://googleapis.com');
+
+    body {
+      background: radial-gradient(circle at center, #1e1336 0%, #0b0714 100%);
+      color: #fff;
+      font-family: 'Montserrat', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    /* Корпус игрового автомата */
+    .casino-machine {
+      background: linear-gradient(145deg, #251942, #150e28);
+      border: 3px solid #ffd700;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.25), inset 0 0 20px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+
+    .machine-title {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+
+    /* Поле ввода + выбор раскладки сбоку */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    .casino-input {
+      flex: 1;
+      background: #0d081a;
+      border: 2px solid #8a2be2;
+      border-radius: 10px;
+      padding: 12px 15px;
+      color: #00ffcc;
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      outline: none;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.9);
+    }
+
+    .casino-input::placeholder {
+      color: #5c4b8a;
+      font-size: 14px;
+      letter-spacing: normal;
+      font-weight: normal;
+    }
+
+    .layout-select {
+      background: linear-gradient(180deg, #ffd700, #d4af37);
+      color: #150e28;
+      border: none;
+      border-radius: 10px;
+      padding: 0 15px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      outline: none;
+      box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+    }
+
+    /* Секции слотов */
+    .slot-group {
+      margin-bottom: 20px;
+    }
+
+    .slot-label {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #b8a6e8;
+      margin-bottom: 8px;
+    }
+
+    .reels-container {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+    }
+
+    /* Отдельный барабан (кнопка) */
+    .reel {
+      flex: 1;
+      height: 65px;
+      background: linear-gradient(180deg, #d9d9d9 0%, #ffffff 25%, #ffffff 75%, #b3b3b3 100%);
+      border: 3px solid #d4af37;
+      border-radius: 10px;
+      color: #1a1033;
+      font-size: 28px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 5px 10px rgba(0,0,0,0.4), inset 0 -5px 10px rgba(0,0,0,0.4), 0 5px 15px rgba(0,0,0,0.5);
+      transition: transform 0.1s, box-shadow 0.2s, border-color 0.2s;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    .reel:hover:not(.spinning) {
+      transform: translateY(-3px);
+      border-color: #00ffcc;
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.6);
+    }
+
+    .reel:active:not(.spinning) {
+      transform: scale(0.95);
+    }
+
+    /* Эффект вращения барабана */
+    .reel.spinning {
+      color: #6a4c93;
+      text-shadow: 0 8px 4px rgba(0,0,0,0.3), 0 -8px 4px rgba(0,0,0,0.3);
+      animation: blurShake 0.1s infinite;
+      cursor: wait;
+    }
+
+    @keyframes blurShake {
+      0% { transform: translateY(-2px); }
+      50% { transform: translateY(2px); }
+      100% { transform: translateY(-2px); }
+    }
+
+    /* Кнопка запуска (Спин) */
+    .spin-btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 15px;
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #fff;
+      background: linear-gradient(180deg, #ff2a5f 0%, #b8002e 100%);
+      border: 2px solid #ff7597;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #7a001e, 0 10px 20px rgba(255, 42, 95, 0.4);
+      transition: all 0.1s;
+    }
+
+    .spin-btn:hover:not(:disabled) {
+      filter: brightness(1.1);
+    }
+
+    .spin-btn:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #7a001e, 0 5px 10px rgba(255, 42, 95, 0.4);
+    }
+
+    .spin-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+<div class="casino-machine">
+  <h2 class="machine-title">Lucky Pass Slots</h2>
+
+  <div class="input-row">
+    <input type="text" id="reg-input" class="casino-input" placeholder="Нажмите на слот для выбора...">
+    <select id="layout-select" class="layout-select" title="Выбор раскладки">
+      <option value="ru">RU 🇷🇺</option>
+      <option value="en">EN 🇬🇧</option>
+    </select>
+  </div>
+
+  <!-- 5 барабанов с буквами -->
+  <div class="slot-group">
+    <span class="slot-label">5 счастливых букв (выбор запустит реролл):</span>
+    <div id="letters-reels" class="reels-container"></div>
+  </div>
+
+  <!-- 3 барабана с символами -->
+  <div class="slot-group">
+    <span class="slot-label">3 бонусных символа:</span>
+    <div id="symbols-reels" class="reels-container"></div>
+  </div>
+
+  <button type="button" id="spin-btn" class="spin-btn">Крутить вручную</button>
+</div>
+
+<script>
+  const layouts = {
+    ru: {
+      letters: 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя'.split(''),
+      symbols: ['!', '"', '№', ';', '%', ':', '?', '*', '(', ')', '_', '+', '/']
+    },
+    en: {
+      letters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split(''),
+      symbols: ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '~', '?']
+    }
+  };
+
+  const inputField = document.getElementById('reg-input');
+  const layoutSelect = document.getElementById('layout-select');
+  const lettersContainer = document.getElementById('letters-reels');
+  const symbolsContainer = document.getElementById('symbols-reels');
+  const spinBtn = document.getElementById('spin-btn');
+
+  let isSpinning = false;
+
+  // Создает пустые ячейки барабанов при старте
+  function initReels() {
+    lettersContainer.innerHTML = '';
+    symbolsContainer.innerHTML = '';
+
+    for (let i = 0; i < 5; i++) {
+      lettersContainer.appendChild(createReelElement());
+    }
+    for (let i = 0; i < 3; i++) {
+      symbolsContainer.appendChild(createReelElement());
+    }
+  }
+
+  function createReelElement() {
+    const div = document.createElement('div');
+    div.className = 'reel';
+    div.textContent = '?';
+    div.addEventListener('click', () => {
+      // Блокируем повторные клики, если барабаны уже крутятся
+      if (isSpinning || div.textContent === '?') return;
+      
+      // Добавляем выбранный символ в поле
+      inputField.value += div.textContent;
+      inputField.focus();
+
+      // Короткая вспышка выбранного слота и мгновенный запуск нового спина
+      div.style.background = '#00ffcc';
+      setTimeout(() => {
+        div.style.background = '';
+        spinAll();
+      }, 150);
+    });
+    return div;
+  }
+
+  function getRandomItems(arr, count) {
+    const shuffled = [...arr].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+  }
+
+  // Анимация прокрутки одного барабана
+  function spinSingleReel(reelEl, pool, finalChar, duration) {
+    return new Promise(resolve => {
+      reelEl.classList.add('spinning');
+      
+      const interval = setInterval(() => {
+        const randomChar = pool[Math.floor(Math.random() * pool.length)];
+        reelEl.textContent = randomChar;
+      }, 50);
+
+      setTimeout(() => {
+        clearInterval(interval);
+        reelEl.textContent = finalChar;
+        reelEl.classList.remove('spinning');
+        resolve();
+      }, duration);
+    });
+  }
+
+  // Запуск всех барабанов с каскадной остановкой
+  async function spinAll() {
+    if (isSpinning) return;
+    isSpinning = true;
+    spinBtn.disabled = true;
+
+    const currentLayout = layoutSelect.value;
+    const data = layouts[currentLayout];
+
+    const targetLetters = getRandomItems(data.letters, 5);
+    const targetSymbols = getRandomItems(data.symbols, 3);
+
+    const letterReels = Array.from(lettersContainer.children);
+    const symbolReels = Array.from(symbolsContainer.children);
+
+    const promises = [];
+
+    letterReels.forEach((reel, idx) => {
+      const stopTime = 400 + idx * 150; 
+      promises.push(spinSingleReel(reel, data.letters, targetLetters[idx], stopTime));
+    });
+
+    symbolReels.forEach((reel, idx) => {
+      const stopTime = 550 + idx * 200;
+      promises.push(spinSingleReel(reel, data.symbols, targetSymbols[idx], stopTime));
+    });
+
+    await Promise.all(promises);
+
+    isSpinning = false;
+    spinBtn.disabled = false;
+  }
+
+  // События
+  spinBtn.addEventListener('click', spinAll);
+  layoutSelect.addEventListener('change', spinAll);
+
+  // Инициализация и первый автоматический спин
+  initReels();
+  spinAll();
+</script>
+
+</body>
+</html>

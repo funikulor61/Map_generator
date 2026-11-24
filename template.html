@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Интерактивный атлас мира</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; overflow: hidden; }
+        #world-map { width: 100vw; height: 100vh; }
+        #search-box {
+            position: fixed; top: 12px; right: 20px; z-index: 900; background: white;
+            padding: 6px 10px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            border: 1px solid #ccc; display: flex; gap: 6px; align-items: center;
+        }
+        #search-input { border: none; outline: none; font-size: 13px; width: 200px; }
+        #search-btn {
+            background: #2b579a; color: white; border: none; border-radius: 4px;
+            padding: 5px 10px; cursor: pointer; font-size: 12px; font-weight: bold;
+        }
+        #sidebar {
+            position: fixed; top: 0; right: -460px; width: 430px; height: 100vh;
+            background: #ffffff; box-shadow: -4px 0 20px rgba(0,0,0,0.2);
+            z-index: 1000; transition: right 0.3s ease; display: flex; flex-direction: column;
+        }
+        #sidebar.open { right: 0; }
+        .sidebar-header {
+            padding: 15px 20px; background: #1e3f72; color: white;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .sidebar-header h2 { margin: 0; font-size: 18px; }
+        .close-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+        .sidebar-content { padding: 15px 20px; overflow-y: auto; flex: 1; }
+        .param-block { margin-bottom: 14px; }
+        .param-block label { display: block; font-weight: bold; font-size: 13px; color: #1e3f72; margin-bottom: 4px; }
+        .param-block textarea {
+            width: 100%; min-height: 60px; padding: 8px; box-sizing: border-box;
+            border: 1px solid #ccc; border-radius: 5px; font-family: inherit; font-size: 13px; resize: vertical;
+        }
+        .sidebar-footer { padding: 12px 20px; background: #f4f4f4; border-top: 1px solid #ddd; display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; color: white; }
+        .btn-save { background: #28a745; }
+        .btn-export { background: #2b579a; }
+    </style>
+</head>
+<body>
+    <div id="search-box">
+        <input type="text" id="search-input" list="countries-list" placeholder="Поиск страны (напр. Беларусь)...">
+        <datalist id="countries-list"></datalist>
+        <button id="search-btn" onclick="searchCountry()">Открыть</button>
+    </div>
+
+    __PLOT_DIV__
+
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2 id="sb-title">Страна</h2>
+            <button class="close-btn" onclick="closeSidebar()">&times;</button>
+        </div>
+        <div class="sidebar-content">
+            <input type="hidden" id="current-iso">
+            <div class="param-block"><label>1. Географическое положение</label><textarea id="f-p1"></textarea></div>
+            <div class="param-block"><label>2. Природные условия и ресурсы</label><textarea id="f-p2"></textarea></div>
+            <div class="param-block"><label>3. Население (демография)</label><textarea id="f-p3"></textarea></div>
+            <div class="param-block"><label>4. Государственный строй</label><textarea id="f-p4"></textarea></div>
+            <div class="param-block"><label>5. Экономика</label><textarea id="f-p5"></textarea></div>
+            <div class="param-block"><label>6. Международные связи</label><textarea id="f-p6"></textarea></div>
+            <div class="param-block"><label>7. Культура и история</label><textarea id="f-p7"></textarea></div>
+        </div>
+        <div class="sidebar-footer">
+            <button class="btn btn-save" onclick="saveCountryData()">Сохранить правки</button>
+            <button class="btn btn-export" onclick="downloadJSON()">Скачать базу (JSON)</button>
+        </div>
+    </div>
+
+    <script>
+        const countriesDB = __DB_JSON__;
+        const jsonFileName = "__JSON_FILE__";
+        const mapDiv = document.getElementById("world-map");
+        const sidebar = document.getElementById("sidebar");
+        const dataList = document.getElementById("countries-list");
+
+        for (const [iso, info] of Object.entries(countriesDB)) {
+            const option = document.createElement("option");
+            option.value = info.name;
+            dataList.appendChild(option);
+        }
+
+        function openCountryCard(iso) {
+            const info = countriesDB[iso];
+            if (!info) return;
+            document.getElementById("current-iso").value = iso;
+            document.getElementById("sb-title").innerText = info.name + " (" + iso + ")";
+            document.getElementById("f-p1").value = info.p1_geo;
+            document.getElementById("f-p2").value = info.p2_nature;
+            document.getElementById("f-p3").value = info.p3_demo;
+            document.getElementById("f-p4").value = info.p4_gov;
+            document.getElementById("f-p5").value = info.p5_econ;
+            document.getElementById("f-p6").value = info.p6_intl;
+            document.getElementById("f-p7").value = info.p7_cult;
+            sidebar.classList.add("open");
+        }
+
+        mapDiv.on("plotly_click", function(data) {
+            openCountryCard(data.points[0].location);
+        });
+
+
+
+        function searchCountry() {
+            const query = document.getElementById("search-input").value.trim().toLowerCase();
+            if (!query) return;
+            for (const [iso, info] of Object.entries(countriesDB)) {
+                if (info.name.toLowerCase() === query || iso.toLowerCase() === query) {
+                    openCountryCard(iso);
+                    return;
+                }
+            }
+            alert("Страна не найдена. Выберите название из списка.");
+        }
+
+        document.getElementById("search-input").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") searchCountry();
+        });
+
+        function closeSidebar() { sidebar.classList.remove("open"); }
+
+        function saveCountryData() {
+            const iso = document.getElementById("current-iso").value;
+            if (!iso || !countriesDB[iso]) return;
+            countriesDB[iso].p1_geo = document.getElementById("f-p1").value;
+            countriesDB[iso].p2_nature = document.getElementById("f-p2").value;
+            countriesDB[iso].p3_demo = document.getElementById("f-p3").value;
+            countriesDB[iso].p4_gov = document.getElementById("f-p4").value;
+            countriesDB[iso].p5_econ = document.getElementById("f-p5").value;
+            countriesDB[iso].p6_intl = document.getElementById("f-p6").value;
+            countriesDB[iso].p7_cult = document.getElementById("f-p7").value;
+            alert("Данные обновлены!");
+        }
+
+        function downloadJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(countriesDB, null, 2));
+            const a = document.createElement("a");
+            a.setAttribute("href", dataStr);
+            a.setAttribute("download", jsonFileName);
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+    </script>
+</body>
+</html>

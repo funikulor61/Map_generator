@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Мой профиль — Мировой Атлас{% endblock %}
+{% block content %}
+
+<div class="card">
+    <div class="section-title">👤 Личный профиль</div>
+    <div class="section-sub">Данные берутся из файла users.csv.</div>
+
+    <div class="profile-grid">
+        <div class="profile-side">
+            <img src="{{ user.avatar }}" alt="Аватар {{ user.login }}">
+            <h2>{{ user.login }}</h2>
+            {% if user.role == 'admin' %}
+                <span class="role-badge admin">администратор</span>
+            {% else %}
+                <span class="role-badge reader">читатель</span>
+            {% endif %}
+        </div>
+        <div>
+            <div class="profile-rows">
+                <div class="row"><b>Логин</b><span>{{ user.login }}</span></div>
+                <div class="row"><b>Роль</b><span>
+                    {% if user.role == 'admin' %}
+                        администратор — может всё: редактировать главную страницу,
+                        карточки стран, пользователей и свой профиль
+                    {% else %}
+                        читатель — может только просматривать главную страницу,
+                        карту стран и этот профиль
+                    {% endif %}
+                </span></div>
+                <div class="row"><b>Дата регистрации</b><span>{{ user.created }}</span></div>
+                <div class="row"><b>Файл аватара</b><span>{{ user.avatar }}</span></div>
+                <div class="row"><b>Сессия</b>
+                    <span>активна, до автозавершения
+                        {% if minutes_left > 0 %} {{ minutes_left }} мин.{% else %} меньше минуты{% endif %}
+                        (таймаут 5 минут бездействия)
+                    </span>
+                </div>
+            </div>
+
+            {% if user.role == 'admin' %}
+            <div class="upload-box">
+                <h3>🖼️ Смена аватарки (только админ)</h3>
+                <form method="post" action="/profile/avatar" enctype="multipart/form-data">
+                    <input type="file" name="avatar" accept=".png,.jpg,.jpeg,.gif" required>
+                    <button type="submit" class="btn btn-green btn-sm">Загрузить</button>
+                </form>
+                <form method="post" action="/profile/password" style="margin-top:16px;">
+                    <h3 style="margin-bottom:8px;">🔑 Смена пароля</h3>
+                    <div class="field">
+                        <label>Старый пароль</label>
+                        <input type="password" name="old_password" required>
+                    </div>
+                    <div class="field">
+                        <label>Новый пароль</label>
+                        <input type="password" name="new_password" required minlength="5">
+                    </div>
+                    <div class="field">
+                        <label>Новый пароль ещё раз</label>
+                        <input type="password" name="new_password2" required minlength="5">
+                    </div>
+                    <button type="submit" class="btn btn-blue btn-sm">Изменить пароль</button>
+                </form>
+            </div>
+            {% else %}
+            <div class="upload-box">
+                <h3>🔒 Читатель не может менять данные</h3>
+                <p class="form-note" style="margin-top:6px;">
+                    По заданию читателю доступен только просмотр: изменять аватар,
+                    пароль и содержимое сайта может лишь администратор.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

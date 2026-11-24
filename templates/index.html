@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}{{ page.hero_title }} — Мировой Атлас{% endblock %}
+{% block content %}
+
+<section class="hero">
+    <h1>🌍 {{ page.hero_title }}</h1>
+    <p>{{ page.hero_text }}</p>
+</section>
+
+{% if blocks %}
+<div class="blocks">
+    {% for b in blocks %}
+        <div class="block-card">
+            <div class="icon">
+                {{ b.title.split(' ')[0] if not b.title[:1].isalnum() else '✨' }}
+            </div>
+            <h3>{{ b.title }}</h3>
+            <p>{{ b.text }}</p>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# движок карты лежит локально, поэтому карта работает даже без интернета #}
+<script src="/static/plotly.min.js"></script>
+<div class="card" id="map">
+    <div class="section-title">🗺️ Карта мира</div>
+    <div class="section-sub">
+        Нажмите на любое государство, чтобы открыть его карточку.
+        Всего государств в справочнике: <b>{{ country_count }}</b>.
+    </div>
+    <div class="map-search">
+        <input type="text" id="search-input" list="countries-list"
+               placeholder="Поиск страны (например, Россия)">
+        <datalist id="countries-list"></datalist>
+        <button class="btn btn-green" onclick="searchCountry()">Открыть карточку</button>
+    </div>
+    <div id="map-holder">{{ map_html | safe }}</div>
+    <p class="map-note">
+        Карта построена библиотекой Plotly из файла data.csv и работает без интернета.
+        Флаги и гербы загружаются с Wikimedia Commons, поэтому для картинок нужен интернет.
+    </p>
+</div>
+
+<!-- ============ всплывающая карточка страны ============ -->
+<div class="modal-overlay" id="country-modal">
+    <div class="country-card">
+        <div class="cc-head">
+            <div class="symbols">
+                <img id="cc-flag" src="" alt="Флаг">
+                <img id="cc-emb" class="emb" src="" alt="Герб">
+            </div>
+            <div class="cc-name">
+                <h2><span class="cc-emoji" id="cc-emoji"></span> <span id="cc-name"></span></h2>
+                <div class="cc-official" id="cc-official"></div>
+            </div>
+            <button class="cc-close" onclick="closeCard()" title="Закрыть">×</button>
+        </div>
+        <div class="cc-body">
+            <div class="cc-stats">
+                <div class="stat">
+                    <div class="num" id="cc-pop"></div>
+                    <div class="lbl">население, чел.</div>
+                </div>
+                <div class="stat green">
+                    <div class="num" id="cc-area"></div>
+                    <div class="lbl">площадь, км²</div>
+                </div>
+                <div class="stat">
+                    <div class="num" id="cc-dens"></div>
+                    <div class="lbl">плотность, чел/км²</div>
+                </div>
+            </div>
+            <p class="cc-info" id="cc-info"></p>
+
+            {% if user.role == 'admin' %}
+            <form class="cc-edit" method="post" action="/country">
+                <label>Правка карточки (доступно только админу)</label>
+                <input type="hidden" name="iso" id="cc-iso">
+                <label>Население (чел.)</label>
+                <div class="row">
+                    <div><input type="text" name="population" id="cc-pop-in" inputmode="numeric"></div>
+                    <div>
+                        <label style="margin-top:0;">Площадь (км²)</label>
+                        <input type="text" name="area" id="cc-area-in" inputmode="decimal">
+                    </div>
+                </div>
+                <label>Краткая справка</label>
+                <textarea name="info" id="cc-info-in"></textarea>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-green">Сохранить карточку</button>
+                </div>
+                <p class="cc-hint">Изменения записываются в data.csv и сразу видны читателям.</p>
+            </form>
+            {% else %}
+            <p class="cc-hint">Редактирование карточки доступно только администратору.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // справочник стран, подготовленный сервером из data.csv
+    const COUNTRIES = {{ countries_json | safe }};
+    const isAdmin = {{ 'true' if user.role == 'admin' else 'false' }};
+    const modal = document.getElementById("country-modal");
+    const mapDiv = document.getElementById("world-map");
+    const dataList = document.getElementById("countries-list");
+
+    // список стран для поиска
+    for (const iso in COUNTRIES) {
+        const option = document.createElement("option");
+        option.value = COUNTRIES[iso].name;
+        dataList.appendChild(option);
+    }
+
+    // красивый формат чисел: 146 119 928
+    function fmt(n) {
+        return Number(n).toLocaleString("ru-RU");
+    }
+
+    function openCard(iso) {
+        const c = COUNTRIES[iso];
+        if (!c) return;
+        // поля формы есть только у админа, у читателя их просто нет
+        const isoInput = document.getElementById("cc-iso");
+        if (isoInput) isoInput.value = iso;
+        document.getElementById("cc-emoji").textContent = c.emoji || "";
+        document.getElementById("cc-name").textContent = c.name;
+        document.getElementById("cc-official").textContent = c.official || "";
+        document.getElementById("cc-info").textContent = c.info || "";
+
+        const flag = document.getElementById("cc-flag");
+        const emb = document.getElementById("cc-emb");
+        flag.style.display = "";
+        emb.style.display = "";
+        flag.src = c.flag_img || "";
+        emb.src = c.emblem_img || "";
+        flag.onerror = function () { this.style.display = "none"; };
+        emb.onerror = function () { this.style.display = "none"; };
+
+        document.getElementById("cc-pop").textContent = fmt(c.population);
+        document.getElementById("cc-area").textContent = fmt(c.area);
+        const dens = c.area > 0 ? c.population / c.area : 0;
+        document.getElementById("cc-dens").textContent =
+            dens > 0 ? dens.toFixed(1) : "—";
+
+        if (isAdmin) {
+            document.getElementById("cc-pop-in").value = c.population;
+            document.getElementById("cc-area-in").value = c.area;
+            document.getElementById("cc-info-in").value = c.info || "";
+        }
+        modal.classList.add("open");
+    }
+
+    function closeCard() {
+        modal.classList.remove("open");
+    }
+
+    // клик по стране на карте открывает карточку
+    mapDiv.on("plotly_click", function (data) {
+        openCard(data.points[0].location);
+    });
+
+    // поиск страны по названию
+    function searchCountry() {
+        const query = document.getElementById("search-input").value.trim().toLowerCase();
+        if (!query) return;
+        for (const iso in COUNTRIES) {
+            if (COUNTRIES[iso].name.toLowerCase() === query || iso.toLowerCase() === query) {
+                openCard(iso);
+                return;
+            }
+        }
+        alert("Страна не найдена. Выберите название из выпадающего списка.");
+    }
+
+    document.getElementById("search-input").addEventListener("keypress", function (e) {
+        if (e.key === "Enter") searchCountry();
+    });
+
+    // карточку можно закрыть кликом по фону или клавишей Esc
+    modal.addEventListener("click", function (e) {
+        if (e.target === modal) closeCard();
+    });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeCard();
+    });
+</script>
+
+{% endblock %}

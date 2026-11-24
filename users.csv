@@ -1,0 +1,4 @@
+login,password_hash,salt,role,avatar,created
+admin,c74a2b1a2500d6ba2489ce64c771669d902f179ee5f17379a87b5bf656c206f1,1fbe287e71d19564,admin,/static/avatars/admin.svg,2026-11-24
+reader,3fff45cf11d2af14be91320661b445f7f6cd32a1a1ec1052ed2d1005eb382660,60b63f8aa1e50669,reader,/static/avatars/reader.svg,2026-11-24
+asdasd,8f9adc562085159626bcdb2c032ab5dc2f88366a7eb2904bd2b51140592f2f2d,81919a216da37565,admin,/static/avatars/asdasd.svg,2026-11-24

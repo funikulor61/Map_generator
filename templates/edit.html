@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Редактор главной страницы — Мировой Атлас{% endblock %}
+{% block content %}
+
+<div class="card form-card wide">
+    <div class="section-title">✏️ Изменение и добавление содержимого</div>
+    <div class="section-sub">
+        Здесь админ меняет заголовок и текст главной страницы, правит
+        информационные блоки, добавляет новые и удаляет лишние.
+        Всё сохраняется в файл <b>data.csv</b>.
+    </div>
+
+    <form method="post" action="/edit">
+        <div class="edit-block">
+            <div class="eb-head"><span>ШАПКА ГЛАВНОЙ СТРАНИЦЫ</span></div>
+            <div class="field">
+                <label>Заголовок (hero)</label>
+                <input type="text" name="hero_title" value="{{ page.hero_title }}" required maxlength="120">
+            </div>
+            <div class="field">
+                <label>Вводный текст (hero)</label>
+                <textarea name="hero_text" required>{{ page.hero_text }}</textarea>
+            </div>
+        </div>
+
+        <div class="eb-head" style="margin: 20px 0 10px;">
+            <span>ИНФОРМАЦИОННЫЕ БЛОКИ ({{ blocks | length }} шт.)</span>
+        </div>
+
+        {% for b in blocks %}
+        <div class="edit-block">
+            <div class="eb-head">
+                <span>Блок {{ loop.index }}</span>
+                <label class="form-note" style="margin:0;">
+                    <input type="checkbox" name="del_{{ b.key }}" value="yes"> удалить этот блок
+                </label>
+            </div>
+            <div class="field">
+                <label>Заголовок блока</label>
+                <input type="text" name="title_{{ b.key }}" value="{{ b.title }}" required maxlength="120">
+            </div>
+            <div class="field">
+                <label>Текст блока</label>
+                <textarea name="text_{{ b.key }}" required>{{ b.text }}</textarea>
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="add-block">
+            <div class="eb-head"><span>➕ НОВЫЙ БЛОК (заполните оба поля, чтобы добавить)</span></div>
+            <div class="field">
+                <label>Заголовок нового блока</label>
+                <input type="text" name="new_title" maxlength="120" placeholder="например: 🌊 Моря и океаны">
+            </div>
+            <div class="field">
+                <label>Текст нового блока</label>
+                <textarea name="new_text" placeholder="Текст нового информационного блока..."></textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-green">💾 Сохранить изменения</button>
+            <a href="/" class="btn btn-ghost">Отменить</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
